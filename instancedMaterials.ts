@@ -1,5 +1,7 @@
 import * as THREE from "three";
 
+// based on https://threejs.org/examples/#webgl_buffergeometry_instancing_lambert
+
 const phong_instancedVertexShader = `
 #define PHONG
 #ifdef INSTANCED

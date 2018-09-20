@@ -6,7 +6,7 @@ const globeRadius = 0.5;
 
 // from https://callumprentice.github.io/apps/voronoi_airports/index.html
 function fromLatLon(latLon: LatLon, height?: number): THREE.Vector3 {
-    const radius = (height || latLon.height) ? globeRadius * (1 + latLon.height) : globeRadius;
+    const radius = (height || latLon.height) ? globeRadius * (1 + (height || latLon.height)) : globeRadius;
     const phi = ((90.0 - latLon.latitude) * Math.PI) / 180.0;
     const theta = ((360.0 - latLon.longitude) * Math.PI) / 180.0;
     const x = radius * Math.sin(phi) * Math.cos(theta);
@@ -143,7 +143,6 @@ class World {
         let mouseCoordsRelative: THREE.Vector2;
         let mouseCoordsProjected: THREE.Vector2;
         const [x, y] = getRelativeCoordinates(event, this.holder);
-        console.log(`m ${x} ${y}`);
         if (x >= 0 && x < this.holder.clientWidth && y >= 0 && y < this.holder.clientHeight) {
             mouseCoordsRelative = new THREE.Vector2(x, y);
             mouseCoordsProjected = new THREE.Vector2(
@@ -165,7 +164,6 @@ class World {
     private readonly onWindowResizeCallback: () => void;
 
     private onWindowResize() {
-        // console.log(`${this.holder.clientWidth}x${this.holder.clientHeight}`);
         this.camera.aspect = this.holder.clientWidth / this.holder.clientHeight;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(this.holder.clientWidth, this.holder.clientHeight);
@@ -194,21 +192,128 @@ class PickableWorld extends World {
 
 class DemoNode {
     coordinates: LatLon;
+    scale: number;
     name: string;
 }
 
-export class RealWorld extends PickableWorld {
-    private readonly nodeList: DemoNode[];
+class DemoCube extends DemoNode {
+}
+
+class DemoSphere extends DemoNode {
+}
+
+export class DemoWorld extends PickableWorld {
+    private readonly cubeList: DemoCube[];
+    private readonly sphereList: DemoSphere[];
+    private readonly pickingLight: THREE.PointLight;
     constructor(holder: HTMLElement, initialCoords: LatLon, mapUrl: string) {
         super(holder, initialCoords, mapUrl);
-        this.nodeList = [];
-        for (let i = 0; i < 10000; i++) {
+        this.pickingLight = new THREE.PointLight(0xffffff, 5.0);
+        this.pickingLight.distance = 0.2;
+        this.pickingLight.visible = false;
+        this.scene.add(this.pickingLight);
+        this.cubeList = DemoWorld.generateRandomCubes();
+        this.sphereList = DemoWorld.generateRandomSpheres();
+        DemoWorld.renderCubes(this.cubeList, this.scene);
+        DemoWorld.renderSpheres(this.sphereList, this.scene);
+    }
 
+    protected onMouseMoved(relative?: THREE.Vector2, projected?: THREE.Vector2): void {
+        let lightPosition: THREE.Vector3 = null;
+        let lightTarget = new THREE.Vector3(0, 0, 0);
+        do {
+            if (!relative)
+                break;
+            const [pickedObj, pickedIndex] = this.getPickedObject(relative);
+            if (!pickedObj)
+                break;
+            console.log(`picked ${pickedObj}: ${pickedIndex}`);
+            if (pickedObj.geometry instanceof instancing.InstancedMappedGeometry && pickedIndex !== null) {
+                const pickedInstance = pickedObj.geometry.findSourceByindex(pickedIndex);
+                console.log(`picked entity of ${pickedInstance.constructor.name}`);
+                if (pickedInstance instanceof DemoNode) {
+                    lightPosition = fromLatLon(pickedInstance.coordinates, pickedInstance.coordinates.height + 0.1);
+                } else {
+                    lightPosition = pickedObj.geometry.getInstancePosition(pickedIndex);
+                }
+            } else {
+                lightPosition = pickedObj.position;
+            }
+        } while (false);
+        if (lightPosition) {
+            this.pickingLight.position.copy(lightPosition);
+            this.pickingLight.visible = true;
+        } else {
+            this.pickingLight.visible = false;
         }
+    }
+
+    private static generateRandomCubes(): DemoCube[] {
+        const nodeList: DemoCube[] = [];
+        for (let i = 0; i < 1000; i++) {
+            const node = new DemoCube();
+            node.coordinates = new LatLon(Math.random() * 180 - 90, Math.random() * 360 - 180, 0.02);
+            node.scale = 0.5 + Math.random() * 2;
+            node.name = `node-${i}`;
+            nodeList.push(node);
+        }
+        return nodeList;
+    }
+
+    private static generateRandomSpheres(): DemoSphere[] {
+        const nodeList: DemoSphere[] = [];
+        for (let i = 0; i < 1000; i++) {
+            const node = new DemoSphere();
+            node.coordinates = new LatLon(Math.random() * 180 - 90, Math.random() * 360 - 180, 0.05);
+            node.scale = 0.5 + Math.random() * 2;
+            node.name = `node-${i}`;
+            nodeList.push(node);
+        }
+        return nodeList;
+    }
+
+    private static renderCubes(nodeList: DemoCube[], scene: THREE.Scene) {
+        const instanceGeometry = new instancing.InstancedMappedGeometry(
+            new THREE.BoxBufferGeometry(0.0025, 0.0025, 0.0025),
+            nodeList,
+            node => fromLatLon(node.coordinates),
+            () => new THREE.Quaternion(Math.random(), Math.random(), Math.random(), Math.random()),
+            node => new THREE.Vector3(node.scale, node.scale, node.scale),
+            () => new THREE.Vector3(Math.random(), Math.random(), Math.random()));
+        const material = new instancing.InstancedMeshPhongMaterial({
+            transparent: true,
+            opacity: 0.6,
+            color: 0xffff00,
+            emissive: 0x333333,
+            side: THREE.FrontSide,
+            flatShading: true
+        });
+        const mesh = new THREE.Mesh(instanceGeometry, material);
+        scene.add(mesh);
+    }
+
+    private static renderSpheres(nodeList: DemoSphere[], scene: THREE.Scene) {
+        const instanceGeometry = new instancing.InstancedMappedGeometry(
+            new THREE.SphereBufferGeometry(0.0025, 64, 64),
+            nodeList,
+            node => fromLatLon(node.coordinates),
+            null,
+            node => new THREE.Vector3(node.scale, node.scale, node.scale),
+            () => new THREE.Vector3(Math.random(), Math.random(), Math.random()));
+        const material = new instancing.InstancedMeshPhongMaterial({
+            transparent: true,
+            opacity: 0.6,
+            color: 0x00ffff,
+            emissive: 0x333333,
+            side: THREE.FrontSide,
+            flatShading: true
+        });
+        const mesh = new THREE.Mesh(instanceGeometry, material);
+        scene.add(mesh);
     }
 }
 
-const world = new PickableWorld(
+const world = new DemoWorld(
     document.querySelector("#threeHolder"),
     new LatLon(40, 100, 1.1),
     "world.topo.bathy.200407.3x5400x2700.jpg"

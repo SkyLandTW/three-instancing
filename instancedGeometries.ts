@@ -1,5 +1,7 @@
 import * as THREE from "three";
 
+// based on https://threejs.org/examples/#webgl_buffergeometry_instancing_lambert
+
 declare module "three" {
     export class InstancedBufferAttribute extends THREE.BufferAttribute {
         // r96 added "normalized" parameter
