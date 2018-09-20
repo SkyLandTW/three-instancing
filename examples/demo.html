@@ -1,0 +1,35 @@
+<html>
+<head>
+    <link rel="stylesheet" type="text/css" href="demo.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/systemjs/0.21.4/system.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/96/three.js"></script>
+    <script>
+        window.require = function(name) {
+            if (name === "three")
+                return window.THREE;
+            throw new Error("unsupported: " + name);
+        };
+        window.module = {};
+        window.exports = {};
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/three-orbitcontrols@2.96.2/OrbitControls.js"></script>
+    <script>
+        delete window.module;
+        delete window.exports;
+    </script>
+</head>
+<body>
+    <header>Header</header>
+    <main>
+        <section id="threeHolder"></section>
+        <section id="overlay"></section>
+    </main>
+    <footer>Footer</footer>
+    <script src="../build/build.js"></script>
+    <script>
+        System.set("three", System.newModule(window.THREE));
+        System.set("three-orbitcontrols", System.newModule(window.THREE.OrbitControls));
+        SystemJS.import("examples/demo");
+    </script>
+</body>
+</html>

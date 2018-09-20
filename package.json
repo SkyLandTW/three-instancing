@@ -1,0 +1,14 @@
+{
+  "name": "three-instancing",
+  "version": "0.9.0",
+  "description": "Simple geometries, materials and picker for OpenGL instancing in three.js",
+  "main": "index.js",
+  "directories": {
+    "example": "examples"
+  },
+  "author": "Ji-Ping Shen <iiiaqd@gmail.com>",
+  "license": "ISC",
+  "dependencies": {
+    "@types/three": "^0.92.23"
+  }
+}
