@@ -342,7 +342,7 @@ export class InstancedLineMaterial extends THREE.LineBasicMaterial {
     vertexShader = basic_instancedVertexShader;
     fragmentShader = basic_instancedFragmentShader;
 
-    constructor(parameters?: THREE.PointsMaterialParameters) {
+    constructor(parameters?: THREE.LineBasicMaterialParameters) {
         super(parameters);
         this.type = "InstancedLineMaterial";
         this["defines"] = this["defines"] || {};

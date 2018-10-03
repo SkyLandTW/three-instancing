@@ -28,8 +28,11 @@ export class InstancedSimpleGeometry extends THREE.InstancedBufferGeometry {
         super();
         this.blueprint = blueprint;
         this.index = blueprint.index;
-        this.attributes.position = blueprint.attributes.position;
-        this.attributes.uv = blueprint.attributes.uv;
+        for (let name in blueprint.attributes) {
+            if (blueprint.attributes.hasOwnProperty(name)) {
+                this.addAttribute(name, blueprint.attributes[name]);
+            }
+        }
         this.instanceIds = new Float32Array(count);
         for (let index = 0; index < count; index++) {
             const id = (new THREE.Object3D()).id; // to get unique bufferGeometryId for each of instance.
